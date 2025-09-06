@@ -1,0 +1,2 @@
+INPUT payload (pre-aggregated groups and totals):
+{payload_json}

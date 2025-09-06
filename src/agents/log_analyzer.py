@@ -8,6 +8,8 @@ import argparse
 
 from src.core import chat
 from src.core.utils import write_json
+from langchain.prompts import PromptTemplate
+
 
 # ---------- Parsing & Grouping ----------
 
@@ -68,32 +70,33 @@ def group_events(lines: Iterable[str]) -> list[dict]:
 # ---------- LLM I/O ----------
 
 def build_llm_messages(groups: list, total_events: int, top_n: int = 3) -> list:
-    """Construct system+user messages for the LLM."""
-    payload = groups[:top_n]  # we’ll pass top_n computed in main (can be 'all')
+    """Construct system+user messages to send to the LLM (from prompt files)."""
 
-    # small hinting: surface exception-like tokens from examples
+    # include top_n groups and add extracted exception tokens per group to help LLM
+    payload = groups[:top_n]
     for g in payload:
         exs = []
         for ex_line in g.get("examples", []):
-            for f in re.findall(r"([A-Za-z_]+(?:Error|Exception))", ex_line):
+            found = re.findall(r"([A-Za-z_]+(?:Error|Exception))", ex_line)
+            for f in found:
                 if f not in exs:
                     exs.append(f)
         if exs:
             g["exceptions"] = exs
 
-    system = (
-        "You are a concise QA log analysis assistant.\n"
-        "Return JSON ONLY (no prose, no fences) with exactly two top-level keys: `groups` and `summary`.\n"
-        "Return a group for EVERY input `signature` and do NOT invent, drop, or rename groups. Echo each `signature` exactly and keep the same order.\n"
-        "Each group must include: `signature`, `count`, `levels`, `examples`, `probable_root_cause`, `recommendation`.\n"
-        "`summary` must include: `total_events` (int), `error_rate` (0-1 float), `top_signatures` (array), and `short_summary` (<=3 sentences).\n"
-        "Keep `probable_root_cause` and `recommendation` concise (<=200 chars). Do not add extra top-level keys."
-    )
+    # Read prompts from files
+    ROOT = Path(__file__).resolve().parents[2]
+    PROMPTS_DIR = ROOT / "src" / "core" / "prompts"
+    system_text = (PROMPTS_DIR / "log_system.txt").read_text(encoding="utf-8")
+    user_template_str = (PROMPTS_DIR / "log_user.txt").read_text(encoding="utf-8")
+    user_template = PromptTemplate.from_template(user_template_str)
 
-    user = "INPUT payload (pre-aggregated groups and totals):\n" + json.dumps(
-        {"groups": payload, "total_events": total_events}, indent=2
-    )
+    user_payload = json.dumps({"groups": payload, "total_events": total_events}, indent=2)
+
+    system = system_text
+    user = user_template.format(payload_json=user_payload)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
 
 def call_llm(messages: list, timeout: int) -> str:
     """Thin wrapper over core chat client (returns raw string)."""
@@ -112,97 +115,73 @@ def parse_llm_output(raw: str) -> dict:
         )
     
 def main(argv: Optional[list] = None) -> None:
+    """Command-line entry point: read logs, call LLM, and write findings.
+
+    This function wires together the small teaching helpers:
+    - load log lines from CLI `--inputs`
+    - aggregate groups with `group_events`
+    - build messages and call the LLM
+    - parse and post-process LLM findings
+    - write JSON and a short markdown summary to `outputs/log_analyzer`.
+
+    Args:
+        argv: Optional list of CLI arguments (used for testing).
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--inputs", nargs="+", required=True)
     parser.add_argument("--timeout", type=int, default=60, help="LLM timeout seconds")
     parser.add_argument(
-        "--llm-top",
-        type=int,
-        default=3,
-        help="How many top groups to send to LLM (use -1 for ALL)",
+        "--llm-top", type=int, default=3, help="How many top groups to send to LLM"
     )
     args = parser.parse_args(argv)
 
-    # parse & group
+    # Configure logging for the process (simple default; agents may override)
+    import logging
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
+    logger = logging.getLogger(__name__)
+
     paths = [Path(p) for p in args.inputs]
     lines = list(load_logs(paths))
+    logger.info("Read %d lines from inputs=%s", len(lines), paths)
+    logger.debug("First 3 lines: %s", lines[:3])
     groups = group_events(lines)
+    logger.info("Grouped into %d signatures", len(groups))
+    logger.debug("Top signatures: %s", [g["signature"] for g in groups[:5]])
     total = sum(g["count"] for g in groups)
 
-    # Option A (1): send ALL groups when --llm-top = -1
-    llm_top = len(groups) if args.llm_top < 0 else args.llm_top
-    messages = build_llm_messages(groups, total, top_n=llm_top)
-
-    # call LLM and parse
+    messages = build_llm_messages(groups, total, top_n=args.llm_top)
+    logger.info("Calling LLM with top_n=%d (total_events=%d)", args.llm_top, total)
+    logger.debug(
+        "LLM payload size=%d chars",
+        len(json.dumps({"groups": groups[: args.llm_top], "total_events": total})),
+    )
     raw = call_llm(messages, timeout=args.timeout)
     findings = parse_llm_output(raw)
 
-    # Ensure summary dict exists
+    # Post-process: ensure `summary.total_events` and `summary.error_rate` are correct
     if "summary" not in findings or not isinstance(findings.get("summary"), dict):
         findings["summary"] = {}
-
-    # Option A (2): HARD-MERGE LLM groups back onto ALL parsed groups
-    llm_by_sig = {
-        g.get("signature"): g
-        for g in findings.get("groups", [])
-        if isinstance(g, dict) and "signature" in g
-    }
-    merged_groups = []
-    for g in groups:
-        sig = g["signature"]
-        base = {
-            "signature": sig,
-            "count": g.get("count", 0),
-            "levels": g.get("levels", {}),
-            "examples": g.get("examples", []),
-        }
-        enrich = llm_by_sig.get(sig, {})
-        base["probable_root_cause"] = enrich.get("probable_root_cause", "")
-        base["recommendation"] = enrich.get("recommendation", "")
-        merged_groups.append(base)
-    findings["groups"] = merged_groups
-
-    # Option A (3): ALWAYS compute error_rate locally from parsed groups
+    findings["summary"].setdefault("total_events", total)
+    # compute local error rate from our grouped counts
     local_errors = sum(g.get("levels", {}).get("ERROR", 0) for g in groups)
     computed_error_rate = round(local_errors / max(1, total), 3)
-    findings["summary"]["total_events"] = total
-    findings["summary"]["error_rate"] = computed_error_rate
+    # validate LLM-provided error_rate; override if missing or out-of-range
+    er = findings["summary"].get("error_rate")
+    if not isinstance(er, (int, float)) or not (0 <= er <= 1):
+        findings["summary"]["error_rate"] = computed_error_rate
 
-        # --- Override top_signatures and short_summary deterministically ---
-    total_info = sum(g.get("levels", {}).get("INFO", 0) for g in groups)
-    total_warn = sum(g.get("levels", {}).get("WARN", 0) for g in groups)
-    total_err  = sum(g.get("levels", {}).get("ERROR", 0) for g in groups)
-
-    # Choose top 3 signatures prioritizing ERRORs, then WARNs, then INFO
-    def sigs_by(level):
-        return sorted(
-            [(g["signature"], g["levels"].get(level, 0)) for g in groups if g["levels"].get(level, 0) > 0],
-            key=lambda x: x[1],
-            reverse=True,
-        )
-
-    top = [s for s, _ in sigs_by("ERROR")]
-    if len(top) < 3:
-        top += [s for s, _ in sigs_by("WARN") if s not in top]
-    if len(top) < 3:
-        top += [s for s, _ in sigs_by("INFO") if s not in top]
-    top = top[:3]
-
-    findings["summary"]["top_signatures"] = top
-    findings["summary"]["short_summary"] = (
-        f"{total} events → {total_err} errors, {total_warn} warnings, {total_info} info "
-        f"(error rate {computed_error_rate:.0%})."
-        + (f" Top errors: {', '.join(top)}." if total_err else "")
-    )
-
-    # Small helper: if a group lacks root cause, try exception tokens from its examples
-    for g in findings["groups"]:
+    # Heuristic: if LLM left probable_root_cause empty, try to extract exception tokens
+    for g in findings.get("groups", []):
         pr = g.get("probable_root_cause", "")
         rec = g.get("recommendation", "")
         if not pr:
             exs = []
             for ex_line in g.get("examples", []):
-                for f in re.findall(r"([A-Za-z_]+(?:Error|Exception))", ex_line):
+                found = re.findall(r"([A-Za-z_]+(?:Error|Exception))", ex_line)
+                for f in found:
                     if f not in exs:
                         exs.append(f)
             if exs:
@@ -220,7 +199,7 @@ def main(argv: Optional[list] = None) -> None:
         "# Summary\n" + json.dumps(findings.get("summary", {}), indent=2),
         encoding="utf-8",
     )
-    print(f"Wrote {out_json} and {out_md}")
+    logger.info("Wrote %s and %s", out_json, out_md)
 
 
 # --- Run as script ---

@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 import argparse
 
 from src.core import chat, pick_requirement, parse_json_safely, to_rows, write_csv
+from langchain.prompts import PromptTemplate
 
 # The functions imported from `src.core` are small, dependency-free helpers
 # used to keep this agent focused on orchestration (easy for students to read
@@ -32,27 +33,11 @@ LAST_RAW_JSON = OUT_DIR / "last_raw.json"  # file where raw LLM text is saved
 # Classroom note: these constants are intentionally simple and visible so
 # students can easily change input/output locations when experimenting.
 
-SYSTEM_PROMPT = """You are a senior QA assistant.
-Think step-by-step about the requirement and produce ONLY a JSON array of
-test cases using this schema:
+PROMPTS_DIR = ROOT / "src" / "core" / "prompts"
+SYSTEM_PROMPT = (PROMPTS_DIR / "testcase_system.txt").read_text(encoding="utf-8")
+USER_TEMPLATE_STR = (PROMPTS_DIR / "testcase_user.txt").read_text(encoding="utf-8")
+USER_TEMPLATE = PromptTemplate.from_template(USER_TEMPLATE_STR)
 
-[
-  {
-    "id": "TC-001",
-    "title": "Short test title",
-    "steps": ["step 1", "step 2"],
-    "expected": "Expected result",
-    "priority": "High|Medium|Low"
-  }
-]
-
-Rules:
-- Return JSON ONLY (no prose, no fences).
-- Provide 4-8 test cases for a typical requirement.
-- Steps should be short, imperative, and precise.
-"""
-
-USER_TEMPLATE = 'Requirement:\n"""{requirement_text}"""'  # user content injected
 # `USER_TEMPLATE` wraps the requirement text so the model sees a clear input
 # block; we keep it simple for students to inspect and modify.
 
@@ -64,7 +49,7 @@ minimal interface used by provider-agnostic chat helpers in the exercises.
 """
 
 
-def main() -> None:
+def main(argv: Optional[list] = None) -> None:
     """Run the testcase agent end-to-end.
 
     Flow:
@@ -85,14 +70,20 @@ def main() -> None:
       review pages, or direct integrations with Jira/TestRail.
     """
 
-    # Accept either a positional arg or --input / -i flag for the requirement path.
+    # Parse CLI: accept `--input PATH` for clarity in teaching demos
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", nargs="?", help="path to requirement .txt file")
-    parser.add_argument("-i", "--input", dest="input_flag", help="path to requirement .txt file")
-    args = parser.parse_args()
+    parser.add_argument("--input", help="Path to a requirement .txt file")
+    args = parser.parse_args(argv)
 
-    chosen = args.input_flag or args.input
-    req_path = pick_requirement(chosen, REQ_DIR)
+    # Configure logging for the process (simple default; agents may override)
+    import logging
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
+    logger = logging.getLogger(__name__)
+
+    req_path = pick_requirement(args.input if args.input else None, REQ_DIR)
     requirement_text = req_path.read_text(encoding="utf-8").strip()
 
     messages: List[Message] = [
@@ -106,30 +97,38 @@ def main() -> None:
     # Call the LLM via the provider-agnostic `chat` function. The returned
     # `raw` is the assistant's text; for Day-1 we expect the model to return
     # a pure JSON array (see SYSTEM_PROMPT) so downstream parsing is simple.
+    logger.debug("Calling chat: provider payload msgs=%d (sys=1,user=1)", len(messages))
     raw = chat(messages)
 
     try:
         cases = parse_json_safely(raw, LAST_RAW_JSON)
-    except (ValueError, json.JSONDecodeError) as exc:
+    except Exception as e:
         # gentle retry nudge — a pragmatic teaching technique: show how a
         # small reminder can correct common model format mistakes.
+        logger.exception(
+            "Initial parse_json_safely failed; will nudge and retry. Raw saved at %s",
+            LAST_RAW_JSON,
+        )
         nudge = (
             raw + "\n\nREMINDER: Return a pure JSON array only, matching the schema."
         )
         try:
             cases = parse_json_safely(nudge, LAST_RAW_JSON)
-        except (ValueError, json.JSONDecodeError) as exc2:
+        except Exception:
             # Surface a clear runtime error with a pointer to the saved raw
             # output so students can debug model responses during the session.
+            logger.error(
+                "Could not parse model output after nudge; see %s", LAST_RAW_JSON
+            )
             raise RuntimeError(
-                f"Could not parse model output as JSON. See {LAST_RAW_JSON}.\nError: {exc}"
-            ) from exc2
+                f"Could not parse model output as JSON. See {LAST_RAW_JSON}.\nError: {e}"
+            )
 
     rows = to_rows(cases)
     write_csv(rows, OUT_CSV)
 
-    print(f"✅ Wrote {len(rows)} test cases to: {OUT_CSV.relative_to(ROOT)}")
-    print(f"ℹ️  Raw model output saved at: {LAST_RAW_JSON.relative_to(ROOT)}")
+    logger.info("✅ Wrote %d test cases to: %s", len(rows), OUT_CSV.relative_to(ROOT))
+    logger.info("ℹ️  Raw model output saved at: %s", LAST_RAW_JSON.relative_to(ROOT))
 
 
 if __name__ == "__main__":
