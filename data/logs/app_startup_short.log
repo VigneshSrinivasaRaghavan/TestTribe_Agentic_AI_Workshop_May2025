@@ -1,0 +1,11 @@
+2025-08-20 08:00:01 [INFO]  Starting application: qa-agent-service v1.2.0
+2025-08-20 08:00:03 [INFO]  Database connection pool initialized (size=10)
+2025-08-20 08:00:05 [ERROR] Failed to warm cache: redis://localhost:6379 - ConnectionRefusedError
+2025-08-20 08:00:08 [INFO]  Health check passed: /health → 200
+2025-08-20 08:00:14 [WARN]  Telemetry upload delayed: 503 Service Unavailable
+2025-08-20 08:00:18 [ERROR]  Unable to bind to metrics port 9100 - Address already in use
+2025-08-20 08:00:25 [ERROR]  Template rendering failed for index page
+2025-08-20 08:00:30 [ERROR]  Session store reports IO errors for key writes
+2025-08-20 08:00:42 [WARN]  Disk pressure detected: /var is 88% full
+2025-08-20 08:00:43 [INFO]  Startup complete; system ready with warnings
+

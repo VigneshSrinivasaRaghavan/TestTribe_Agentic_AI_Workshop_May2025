@@ -1,0 +1,11 @@
+2025-08-20 09:12:11 [INFO]  Worker-7 processing job job_id=8a3f2b
+2025-08-20 09:12:13 [ERROR] Payment processing failed: PaymentGatewayError: Declined card - code 402
+2025-08-20 09:14:03 [ERROR] Timeout while calling /api/external/notify (30000ms)
+2025-08-20 09:17:05 [ERROR]  Couldn't write to disk: OSError: [Errno 28] No space left on device
+2025-08-20 09:19:12 [ERROR] Database deadlock detected on conn id=34
+2025-08-20 09:21:10 [ERROR]  Worker-9 crashed: AssertionError: expected 42 got 0
+2025-08-20 09:27:00 [ERROR]  Unexpected null pointer in transformer module
+2025-08-20 09:31:55 [ERROR]  Rate limit exceeded for /api/search - 429 Too Many Requests
+2025-08-20 09:34:17 [ERROR]  Serialization failed: ValueError: could not serialize object of type set
+2025-08-20 09:38:45 [INFO]  System stabilized; error rate dropped to 0.03
+

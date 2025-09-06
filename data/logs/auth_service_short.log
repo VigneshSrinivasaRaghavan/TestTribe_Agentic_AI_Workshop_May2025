@@ -1,0 +1,11 @@
+2025-08-20 10:05:03 [ERROR] Failed login attempt: username=alice@example.com ip=10.1.2.3 reason=invalid_password
+2025-08-20 10:05:03 [INFO]  Lockout counter for username=alice@example.com is now 1
+2025-08-20 10:07:25 [ERROR] Failed login attempt: username=alice@example.com ip=10.1.2.3 reason=invalid_password
+2025-08-20 10:08:33 [WARN]  Lockout threshold reached for username=alice@example.com; account temporarily locked
+2025-08-20 10:09:00 [ERROR] Authentication timeout contacting MFA provider (15000ms)
+2025-08-20 10:11:05 [WARN]  Suspicious activity: multiple failed logins from ip=10.1.2.3 (count=5)
+2025-08-20 10:12:00 [INFO]  Manual unlock performed by admin=carol
+2025-08-20 10:13:05 [INFO]  User bob@example.com completed password reset
+2025-08-20 10:15:33 [ERROR] Session store write failed: redis://session-store - ConnectionError
+2025-08-20 10:23:00 [INFO]  AuthService running normally
+
