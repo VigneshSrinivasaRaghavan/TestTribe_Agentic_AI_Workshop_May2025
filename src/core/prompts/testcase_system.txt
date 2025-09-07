@@ -14,5 +14,5 @@ test cases using this schema:
 
 Rules:
 - Return JSON ONLY (no prose, no fences).
-- Provide 4–8 test cases for a typical requirement.
+- Provide 5 test cases for a typical requirement.
 - Steps should be short, imperative, and precise.

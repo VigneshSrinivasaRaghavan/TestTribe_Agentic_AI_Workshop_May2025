@@ -16,6 +16,8 @@ import argparse
 
 from src.core import chat, pick_requirement, parse_json_safely, to_rows, write_csv
 from langchain.prompts import PromptTemplate
+from src.integrations.testrail import map_case_to_testrail_payload, create_case, list_cases, add_result, get_stats
+import re
 
 # The functions imported from `src.core` are small, dependency-free helpers
 # used to keep this agent focused on orchestration (easy for students to read
@@ -48,6 +50,18 @@ Each message is a dict with `role` and `content` strings, matching the
 minimal interface used by provider-agnostic chat helpers in the exercises.
 """
 
+def _norm(title: str | None) -> str:
+    """
+    Normalize a title for stable dedupe.
+    - case-insensitive
+    - trims
+    - removes non-alphanumeric (keeps [a-z0-9] only)
+    - collapses whitespace
+    """
+    s = (title or "").lower().strip()
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 def main(argv: Optional[list] = None) -> None:
     """Run the testcase agent end-to-end.
@@ -130,6 +144,84 @@ def main(argv: Optional[list] = None) -> None:
     logger.info("✅ Wrote %d test cases to: %s", len(rows), OUT_CSV.relative_to(ROOT))
     logger.info("ℹ️  Raw model output saved at: %s", LAST_RAW_JSON.relative_to(ROOT))
 
+    # --- Day-4: Act step → push to TestRail mock ---
+    logger.info("ℹ️  Starting TestRail push step")
+
+    # Map once → collect payloads (so we dedupe on the exact titles we will POST)
+    payloads: list[dict] = []
+    for idx, c in enumerate(cases, start=1):
+        try:
+            p = map_case_to_testrail_payload(c)
+            payloads.append(p)
+        except Exception as e:
+            logger.warning("Skipping case %s (mapping error): %s", c.get("id") or idx, e)
+
+    # Build once: incoming titles from *mapped* payloads
+    incoming_titles = { _norm(p.get("title")) for p in payloads }
+
+    # Build once: existing titles from TestRail (project-wide)
+    try:
+        existing = list_cases()  # returns list[dict]
+        existing_titles = { _norm(case.get("title")) for case in existing }
+    except Exception as e:
+        logger.warning("Could not fetch existing titles; proceeding without dedupe: %s", e)
+        existing_titles = set()
+
+    logger.info("📚 Loaded %d existing titles from TestRail (project-wide)", len(existing_titles))
+
+    # One-shot duplicate report (informational)
+    dupes = incoming_titles & existing_titles
+    if dupes:
+        logger.info(
+            "🚧 Detected %d duplicate title(s) in this batch; they will be skipped: %s",
+            len(dupes), sorted(list(dupes))[:5]  # show first few only
+        )
+    else:
+        logger.info("✅ No duplicates detected for this batch")
+
+    created_ids: list[int] = []
+    for p in payloads:
+        title_norm = _norm(p.get("title"))
+
+        # Skip if already exists (pre-existing or created earlier in this run)
+        if title_norm in existing_titles:
+            logger.info("↪️  Skipping existing case: %s", p.get("title"))
+            continue
+
+        try:
+            res = create_case(p)
+            cid = res.get("id")
+            if cid is not None:
+                created_ids.append(int(cid))         # ✅ safe append
+                existing_titles.add(title_norm)      # prevent same-batch duplicates
+                try:
+                    _ = add_result(int(cid),status_id=1, comment="Auto-passed by TestCase Agent")
+                except Exception as e:
+                    logger.warning("Could not add result for case id %d: %s", int(cid), e)
+            else:
+                logger.warning("Create case response missing 'id': %s", res)
+        except Exception as e:
+            logger.error("Create case failed for '%s': %s", p.get("title"), e)
+
+    logger.info("📌 Created %d TestRail cases: %s", len(created_ids), created_ids)
+
+    # Quick verification
+    try:
+        all_cases = list_cases()
+        logger.info("🧾 TestRail now has %d cases in project", len(all_cases))
+    except Exception as e:
+        logger.warning("Could not list TestRail cases: %s", e)
+
+    logger.info("✅ Test cases pushed to TestRail successfully with id %s", created_ids)
+
+    try:
+        stats = get_stats()
+        total = stats.get("total_cases")
+        logger.info("📊 Project stats → total_cases: %s", total)
+        for s in stats.get("sections", []):
+            logger.info("   • %s: %s case(s)", s.get("section_name"), s.get("case_count"))
+    except Exception as e:
+        logger.warning("Could not fetch project stats: %s", e)
 
 if __name__ == "__main__":
     main()

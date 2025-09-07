@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import List, Dict
+import requests
 
 
 def pick_requirement(path_arg: str | None, req_dir: Path) -> Path:
@@ -161,3 +162,15 @@ def write_json(obj: object, path: Path) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
+
+# --- HTTP helpers (generic JSON) ---
+
+def http_post_json(url: str, payload: dict, headers: dict | None = None, timeout: int = 60) -> dict:
+    r = requests.post(url, json=payload, headers=headers or {}, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+def http_get_json(url: str, headers: dict | None = None, timeout: int = 60) -> dict:
+    r = requests.get(url, headers=headers or {}, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
