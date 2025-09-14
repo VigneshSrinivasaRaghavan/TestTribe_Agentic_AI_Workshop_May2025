@@ -27,7 +27,10 @@ def main():
     if args.input:
         init_state["requirement_path"] = args.input
 
-    final_state = app.invoke(init_state)
+    final_state = app.invoke(
+    init_state,
+    config={"configurable": {"thread_id": "testcase-run-1"}}
+)
 
     # Summarized final output
     num_tests = len(final_state.get("tests", []))

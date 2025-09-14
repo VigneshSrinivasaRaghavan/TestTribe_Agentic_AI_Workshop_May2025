@@ -1,4 +1,5 @@
 import logging
+import time  # add this import at the top with others
 from pathlib import Path
 from typing import List
 
@@ -49,12 +50,10 @@ def read_requirements(state: TestCaseState) -> TestCaseState:
     state["requirements"] = req_path.read_text(encoding="utf-8").strip()
     return state
 
-
-
 # Node 2
 
 def generate_tests_with_llm(state: TestCaseState) -> TestCaseState:
-    """Generate test cases using LLM."""
+    """Generate test cases using LLM with retry logic."""
     logger.info("🤖 Generating test cases with LLM...")
 
     user_prompt = USER_PROMPT_TEMPLATE.format(
@@ -66,18 +65,30 @@ def generate_tests_with_llm(state: TestCaseState) -> TestCaseState:
         {"role": "user", "content": user_prompt},
     ]
 
-    raw = chat(messages)
-    try:
-        cases = parse_json_safely(raw, LAST_RAW_JSON)
-    except Exception:
-        logger.warning("⚠️ Could not parse JSON from LLM, writing raw output")
-        cases = []
+    cases = []
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"🔄 Attempt {attempt}/{max_retries} to call LLM...")
+            raw = chat(messages)
+            cases = parse_json_safely(raw, LAST_RAW_JSON)
+            if cases:  # success
+                break
+        except Exception as e:
+            logger.warning(f"⚠️ LLM call failed on attempt {attempt}: {e}")
+        time.sleep(2 * attempt)  # exponential backoff
+
+    if not cases:
+        logger.error("❌ All retries failed. No valid test cases generated.")
+        cases = [
+            {"title": "Canned dummy test of Login with valid credentials", "steps": ["Enter username", "Enter password", "Click login"], "expected": "User is logged in"},
+            {"title": "Canned dummy test of Login with invalid password", "steps": ["Enter username", "Enter wrong password", "Click login"], "expected": "Error message displayed"},
+        ]
 
     rows = to_rows(cases)
     write_csv(rows, OUT_CSV)
     logger.info(f"✅ Wrote {len(rows)} test cases to {OUT_CSV}")
 
-    # Save parsed tests as simple list of titles
     state["tests"] = [c.get("title", "Untitled Test") for c in cases]
     return state
 

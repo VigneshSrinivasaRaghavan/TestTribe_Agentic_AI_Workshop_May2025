@@ -31,3 +31,6 @@ class TestCaseState(TypedDict, total=False):
 
     # Errors (if any) collected during pipeline
     errors: List[str]
+
+    # HITL decision (approved/rejected)
+    approval_decision: Optional[str]
