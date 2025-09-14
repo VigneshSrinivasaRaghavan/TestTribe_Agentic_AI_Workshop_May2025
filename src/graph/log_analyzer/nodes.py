@@ -32,7 +32,7 @@ OUT_MD = OUT_DIR / "log_summary.md"
 
 def read_logs(state: LogAnalyzerState) -> LogAnalyzerState:
     """Read log files into state.logs"""
-    paths = state.get("log_paths") or [str(LOG_DIR / "app_startup.log")]
+    paths = state.get("log_paths") or [str(LOG_DIR / "app_startup_short.log")]
     lines: List[str] = []
     for p in paths:
         path = Path(p)

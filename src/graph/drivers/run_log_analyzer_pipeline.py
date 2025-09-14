@@ -5,7 +5,7 @@ This script runs the LangGraph Log Analyzer pipeline.
 
 Usage:
   python -m src.graph.drivers.run_log_analyzer_pipeline --inputs data/logs/runtime_errors.log
-  python -m src.graph.drivers.run_log_analyzer_pipeline --inputs data/logs/runtime_errors.log data/logs/app_startup.log
+  python -m src.graph.drivers.run_log_analyzer_pipeline --inputs data/logs/runtime_errors.log data/logs/app_startup_short.log
 """
 
 import logging
