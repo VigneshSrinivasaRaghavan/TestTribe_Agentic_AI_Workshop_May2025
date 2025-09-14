@@ -1,0 +1,88 @@
+{
+  "project": "UI",
+  "cwd": "/Users/vigneshraghavan/Personal/Trainings/Personal/playwright-demo-for-agentic-ai",
+  "junit_path": "results/junit-ui.xml",
+  "policy": "flaky_only",
+  "max_attempts": 2,
+  "summary": {
+    "total": 4,
+    "passed": 2,
+    "failed": 2,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "name": "@smoke has title",
+      "suite": "example.spec.ts",
+      "time_s": 1.372,
+      "status": "passed",
+      "message": "",
+      "attempt": 1,
+      "project": "UI"
+    },
+    {
+      "name": "@regression get started link",
+      "suite": "example.spec.ts",
+      "time_s": 1.474,
+      "status": "passed",
+      "message": "",
+      "attempt": 1,
+      "project": "UI"
+    },
+    {
+      "name": "@flaky Get started link is visible (sometimes)",
+      "suite": "example.spec.ts",
+      "time_s": 3.501,
+      "status": "failed",
+      "message": "example.spec.ts:25:5 @flaky Get started link is visible (sometimes)",
+      "attempt": 1,
+      "project": "UI"
+    },
+    {
+      "name": "@real failing assertion shows defect",
+      "suite": "example.spec.ts",
+      "time_s": 6.651,
+      "status": "failed",
+      "message": "example.spec.ts:48:5 @real failing assertion shows defect",
+      "attempt": 1,
+      "project": "UI"
+    },
+    {
+      "name": "@smoke has title",
+      "suite": "example.spec.ts",
+      "time_s": 1.148,
+      "status": "passed",
+      "message": "",
+      "attempt": 2,
+      "project": "UI"
+    },
+    {
+      "name": "@regression get started link",
+      "suite": "example.spec.ts",
+      "time_s": 1.746,
+      "status": "passed",
+      "message": "",
+      "attempt": 2,
+      "project": "UI"
+    },
+    {
+      "name": "@flaky Get started link is visible (sometimes)",
+      "suite": "example.spec.ts",
+      "time_s": 3.511,
+      "status": "failed",
+      "message": "example.spec.ts:25:5 @flaky Get started link is visible (sometimes)",
+      "attempt": 2,
+      "project": "UI"
+    },
+    {
+      "name": "@real failing assertion shows defect",
+      "suite": "example.spec.ts",
+      "time_s": 6.483,
+      "status": "failed",
+      "message": "example.spec.ts:48:5 @real failing assertion shows defect",
+      "attempt": 2,
+      "project": "UI"
+    }
+  ],
+  "errors": []
+}
