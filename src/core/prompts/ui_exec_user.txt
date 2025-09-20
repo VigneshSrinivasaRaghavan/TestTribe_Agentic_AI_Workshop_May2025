@@ -1,0 +1,22 @@
+You will receive a JSON payload describing a Playwright UI test run.
+
+TASK
+- Read the payload carefully.
+- Write a short, human-friendly SUMMARY (<= 3 lines).
+- For each failed test case, assign a LABEL and a brief REASON:
+  - label: "transient" OR "real"
+  - reason: <= 160 chars, cite evidence from message/details
+- Be conservative: if unclear, default to "real".
+
+OUTPUT FORMAT (STRICT JSON ONLY)
+{
+  "summary": "string",
+  "labels": [
+    {"name": "string", "label": "transient" | "real", "reason": "string"}
+  ]
+}
+
+DO NOT return anything except a single valid JSON object (no markdown, no extra keys).
+
+PAYLOAD
+{payload}

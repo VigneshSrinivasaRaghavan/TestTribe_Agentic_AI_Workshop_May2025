@@ -37,5 +37,8 @@ class UIExecState(TypedDict, total=False):
     policy: Literal["always", "flaky_only", "none"]
     retry_scope: Literal["full", "failed_only"]
 
+    # LLM outputs
+    llm_summary:str                # LLM-generated summary of test results
+
 
 __all__ = ["UIExecState"]

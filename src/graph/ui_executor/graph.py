@@ -3,33 +3,44 @@ from __future__ import annotations
 from langgraph.graph import StateGraph, END
 
 from src.graph.ui_executor.state import UIExecState
-from src.graph.ui_executor import nodes
+# Import node functions explicitly so Pylance recognizes them
+from src.graph.ui_executor.nodes import (
+    prepare_config,
+    execute_tests,
+    parse_results,
+    llm_triage,
+    approval_checkpoint,
+    retry_once,
+    decide_after_approval,
+)
 
 
 def build_ui_app():
     """
-    Wire the UI Executor graph with five small nodes:
-      prepare -> run -> parse -> approve -> (retry|END)
+    Wire the UI Executor graph with six small nodes:
+      prepare -> run -> parse -> llm_triage -> approve -> (retry|END)
     """
     g = StateGraph(UIExecState)
 
     # Nodes
-    g.add_node("prepare", nodes.prepare_config)
-    g.add_node("run", nodes.execute_tests)
-    g.add_node("parse", nodes.parse_results)
-    g.add_node("approve", nodes.approval_checkpoint)
-    g.add_node("retry", nodes.retry_once)
+    g.add_node("prepare", prepare_config)
+    g.add_node("run", execute_tests)
+    g.add_node("parse", parse_results)
+    g.add_node("llm_triage", llm_triage)
+    g.add_node("approve", approval_checkpoint)
+    g.add_node("retry", retry_once)
 
     # Linear edges
     g.set_entry_point("prepare")
     g.add_edge("prepare", "run")
     g.add_edge("run", "parse")
-    g.add_edge("parse", "approve")
+    g.add_edge("parse", "llm_triage")
+    g.add_edge("llm_triage", "approve")
 
     # Conditional branch after approval
     g.add_conditional_edges(
         "approve",
-        nodes.decide_after_approval,
+        decide_after_approval,
         {
             "retry": "retry",
             "end": END,
