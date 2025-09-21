@@ -40,5 +40,8 @@ class UIExecState(TypedDict, total=False):
     # LLM outputs
     llm_summary:str                # LLM-generated summary of test results
 
+    # Memory Output
+    memory_notes: List[str]         # Insights from the memory
+
 
 __all__ = ["UIExecState"]

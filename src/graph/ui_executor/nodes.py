@@ -10,6 +10,8 @@ from src.graph.ui_executor.state import UIExecState
 from src.core.llm_client import chat
 import json
 
+from src.memory import memory_store
+
 
 # ---------- Node 1: prepare config ----------
 def prepare_config(state: UIExecState) -> UIExecState:
@@ -345,4 +347,49 @@ def approval_checkpoint(state: UIExecState) -> UIExecState:
         # Non-interactive environment (CI): keep existing value
         pass
 
+    return s
+
+
+# ---------- Node 7: persist to memory ----------
+
+def persist_to_memory(state: UIExecState) -> UIExecState:
+    """
+    Save the current run into SQLite memory and annotate failures
+    with recurrence information (scoped to recent days).
+    """
+    s = cast(UIExecState, dict(state))
+
+    summary = s.get("summary", {}) or {}
+    results: List[Dict] = s.get("results", []) or []
+    llm_summary = s.get("llm_summary", "") or ""
+
+    # Save run + results into SQLite
+    try:
+        memory_store.save_run(
+            project="UI",
+            summary=summary,
+            results=results,
+            llm_summary=llm_summary,
+        )
+    except Exception as e:
+        errs: List[str] = s.setdefault("errors", [])
+        errs.append(f"[persist_to_memory] Save error: {e}")
+        return s
+
+    # Check recurrence for each failed test (last 7 days only)
+    notes: List[str] = []
+    for case in results:
+        if case.get("status") == "failed":
+            name = case.get("name", "")
+            msg = case.get("message", "")
+            try:
+                count = memory_store.find_recurrences(name, msg, days=7)
+                if count > 1:
+                    notes.append(f"{name}: seen {count} times in last 7 days")
+                else:
+                    notes.append(f"{name}: NEW failure")
+            except Exception as e:
+                notes.append(f"{name}: memory lookup error {e}")
+
+    s["memory_notes"] = notes
     return s
