@@ -1,0 +1,13 @@
+{
+  "total_requirements": 12,
+  "covered": 7,
+  "uncovered": 5,
+  "coverage_percentage": 58,
+  "uncovered_requirements": [
+    "REQ-105: Dashboard should display user’s recent activity",
+    "REQ-109: System must log out inactive users after 15 mins",
+    "REQ-110: Mobile view should be responsive",
+    "REQ-111: Admin can generate monthly reports",
+    "REQ-112: Error messages must be user friendly"
+  ]
+}

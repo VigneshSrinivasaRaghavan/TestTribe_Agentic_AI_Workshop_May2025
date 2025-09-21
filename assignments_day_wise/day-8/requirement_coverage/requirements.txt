@@ -1,0 +1,12 @@
+REQ-101: User should be able to register with email and password
+REQ-102: Login must work with valid credentials
+REQ-103: Login should fail with wrong password
+REQ-104: Users can reset password via forgot password link
+REQ-105: Dashboard should display user’s recent activity
+REQ-106: Users should be able to update profile details
+REQ-107: Payment should support Visa, Master, Amex
+REQ-108: Search bar should return matching results within 2 sec
+REQ-109: System must log out inactive users after 15 mins
+REQ-110: Mobile view should be responsive
+REQ-111: Admin can generate monthly reports
+REQ-112: Error messages must be user friendly

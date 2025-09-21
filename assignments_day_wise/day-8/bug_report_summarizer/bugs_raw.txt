@@ -1,0 +1,87 @@
+[Bug 101]
+Title: login btn not working sometimes
+Steps: open chrome, go staging site login, enter creds, click login
+Actual: nothing happen
+Expected: should login & go dashboard
+Severity: high
+
+---
+
+[Bug 102]
+Title: App crash on uploading pdf
+Steps: login → go to upload page → upload big file ~50mb
+Actual: app close suddenly
+Expected: file upload success or show proper error
+Severity: critical
+
+---
+
+[Bug 103]
+Title: wrong currency shown in checkout
+Steps: add item $10 → checkout
+Actual: show 10 EUR
+Expected: show 10 USD
+Severity: blocker
+
+---
+
+[Bug 104]
+Title: forgot password email not send
+Steps: go login → click forgot password → enter mail
+Actual: no reset mail in inbox (esp yahoo users)
+Expected: reset email should send
+Severity: major
+
+---
+
+[Bug 105]
+Title: search feature no result
+Steps: login → search "insurance"
+Actual: nothing display
+Expected: atleast 5 docs match
+Severity: medium
+
+---
+
+[Bug 106]
+Title: mobile view layout broken
+Steps: open site on iphone 13 safari
+Actual: homepage text overlap, button hidden
+Expected: layout should be responsive
+Severity: minor
+
+---
+
+[Bug 107]
+Title: duplicate records in report
+Steps: run monthly sales report
+Actual: some entries appear twice
+Expected: report should show unique entries
+Severity: high
+
+---
+
+[Bug 108]
+Title: payment fail with amex card
+Steps: add item → pay with amex
+Actual: transaction failed msg
+Expected: payment success
+Severity: critical
+
+---
+
+[Bug 109]
+Title: profile photo not update
+Steps: login → go profile → upload new pic
+Actual: old photo still showing
+Expected: new photo should appear
+Severity: low
+
+---
+
+[Bug 110]
+Title: logout link not visible
+Steps: login → navigate pages
+Actual: no logout option
+Expected: logout link/button visible
+Severity: high

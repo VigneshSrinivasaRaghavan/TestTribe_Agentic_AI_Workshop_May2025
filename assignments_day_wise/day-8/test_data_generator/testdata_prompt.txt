@@ -1,0 +1,10 @@
+Generate sample test input data for a user registration form.
+
+The form has the following fields:
+- Full Name
+- Email
+- Password
+- Phone Number
+- Date of Birth
+
+The test data should include both positive and negative cases.

@@ -1,0 +1,9 @@
+FullName,Email,Password,PhoneNumber,DateOfBirth,Category
+John Doe,john.doe@example.com,Passw0rd!,+14155552671,1990-05-14,Positive
+Alice Smith,alice.smith@test.com,Secure@123,+442071838750,1985-11-30,Positive
+Raj Kumar,raj.kumar@domain.in,Qwerty!9,+919876543210,1992-07-22,Positive
+,,NoPass123,,2000-01-01,Negative
+Bob Marley,bob@@test.com,Marley123,+141500000000,1988-03-10,Negative
+Jane Doe,jane.doe@example.com,password,12345,1995-12-12,Negative
+Chris Wong,chris.wong@mail.com,StrongP@ss,+6587654321,2001-09-09,Positive
+Maria Lopez,maria.lopez@test,Lopez2024!,+34123456789,1999-02-20,Negative

@@ -1,0 +1,11 @@
+BugID,Title,Steps,Expected,Actual,Severity
+101,Login button not working,Open Chrome → staging site login → enter creds → click login,User should login and go to dashboard,Nothing happens,High
+102,App crash on PDF upload,Login → upload page → upload ~50MB file,File should upload or show proper error,App crashes suddenly,Critical
+103,Wrong currency in checkout,Add item $10 → checkout,Price should show 10 USD,Shows 10 EUR,Blocker
+104,Forgot password email not sent,Go login → forgot password → enter email,Reset email should be received,No reset email received (esp Yahoo),Major
+105,Search feature not returning results,Login → search "insurance",At least 5 docs should match,No results displayed,Medium
+106,Mobile layout broken,Open site on iPhone 13 Safari,Layout should be responsive,Text overlaps & button hidden,Minor
+107,Duplicate records in report,Run monthly sales report,Report should show unique entries,Some entries appear twice,High
+108,Payment fails with Amex,Add item → pay with Amex,Payment should succeed,Transaction failed,Critical
+109,Profile photo not updating,Login → profile → upload new photo,New photo should appear,Old photo still showing,Low
+110,Logout link not visible,Login → navigate pages,Logout option should be visible,No logout option found,High

@@ -1,0 +1,8 @@
+TestCaseID,Title,RelatedRequirement
+TC-01,Register with valid email and password,REQ-101
+TC-02,Login with correct user and password,REQ-102
+TC-03,Login with invalid password shows error,REQ-103
+TC-04,Forgot password flow sends reset email,REQ-104
+TC-05,Update user profile details,REQ-106
+TC-06,Payment with Visa card,REQ-107
+TC-07,Search returns correct results,REQ-108
